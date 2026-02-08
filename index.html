@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slave 2.0 - Telegram Game</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            color: white;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .stat {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin: 5px 0;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+        
+        .btn-success {
+            background: #48bb78;
+        }
+        
+        .tabs {
+            display: flex;
+            background: #f1f5f9;
+            border-radius: 10px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-weight: bold;
+            color: #64748b;
+        }
+        
+        .tab.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .task-item {
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 10px 0;
+            background: #f8f9fa;
+            border-radius: 0 10px 10px 0;
+        }
+        
+        .task-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .task-desc {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .player-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .player-avatar {
+            width: 40px;
+            height: 40px;
+            background: #667eea;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            width: 90%;
+            max-width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        
+        .input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+        }
+        
+        .error {
+            color: #e53e3e;
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Загрузка -->
+        <div id="loading" class="card loading">
+            <h2>Загрузка...</h2>
+            <p>Подключаемся к Telegram</p>
+        </div>
+        
+        <!-- Главный экран -->
+        <div id="main" style="display: none;">
+            <!-- Профиль -->
+            <div class="header">
+                <h1>👑 Slave 2.0</h1>
+                <p id="username">@username</p>
+            </div>
+            
+            <div class="card">
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-value" id="balance">100</div>
+                        <div class="stat-label">Монеты</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="energy">100</div>
+                        <div class="stat-label">Энергия</div>
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin: 15px 0;">
+                    <div class="stat-value" id="level">Уровень 1</div>
+                </div>
+            </div>
+            
+            <!-- Меню -->
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('tasks')">📝 Задания</button>
+                <button class="tab" onclick="showTab('slaves')">👥 Рабы</button>
+                <button class="tab" onclick="showTab('top')">🏆 Топ</button>
+                <button class="tab" onclick="showTab('shop')">🛒 Магазин</button>
+            </div>
+            
+            <!-- Вкладка Задания -->
+            <div id="tasks-tab" class="tab-content">
+                <div class="card">
+                    <h3 style="margin-bottom: 15px;">Активные задания</h3>
+                    <div id="tasks-list">
+                        <!-- Задания загружаются здесь -->
+                    </div>
+                    <button class="btn btn-secondary" onclick="loadTasks()">🔄 Обновить</button>
+                </div>
+            </div>
+            
+            <!-- Вкладка Рабы -->
+            <div id="slaves-tab" class="tab-content" style="display: none;">
+                <div class="card">
+                    <h3 style="margin-bottom: 15px;">Мои рабы</h3>
+                    <div id="slaves-list">
+                        <!-- Рабы загружаются здесь -->
+                    </div>
+                    <button class="btn" onclick="giveRandomTask()">🎯 Дать задание</button>
+                </div>
+            </div>
+            
+            <!-- Вкладка Топ -->
+            <div id="top-tab" class="tab-content" style="display: none;">
+                <div class="card">
+                    <h3 style="margin-bottom: 15px;">Топ игроков</h3>
+                    <div id="top-list">
+                        <!-- Топ загружается здесь -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Вкладка Магазин -->
+            <div id="shop-tab" class="tab-content" style="display: none;">
+                <div class="card">
+                    <h3 style="margin-bottom: 15px;">Магазин</h3>
+                    <div class="task-item">
+                        <div class="task-title">⚡ Энергия (10 единиц)</div>
+                        <div class="task-desc">Восстанови энергию для выполнения заданий</div>
+                        <button class="btn btn-success" onclick="buyItem('energy')">Купить за 50 монет</button>
+                    </div>
+                    <div class="task-item">
+                        <div class="task-title">⭐ Премиум статус</div>
+                        <div class="task-desc">Получай на 20% больше наград</div>
+                        <button class="btn btn-success" onclick="buyItem('premium')">Купить за 200 монет</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Модальное окно выполнения задания -->
+        <div id="complete-modal" class="modal">
+            <div class="modal-content">
+                <h3 id="modal-title">Выполнить задание</h3>
+                <p id="modal-desc"></p>
+                <input type="text" id="proof-input" class="input" placeholder="Введите доказательство (ссылка или текст)">
+                <button class="btn" onclick="submitTask()">📤 Отправить</button>
+                <button class="btn btn-secondary" onclick="closeModal()">Отмена</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Глобальные переменные
+        let currentUser = null;
+        let currentTaskId = null;
+        const API_URL = window.location.origin + '/api';
+        
+        // Telegram Web App
+        const tg = window.Telegram.WebApp;
+        
+        // Инициализация
+        async function init() {
+            try {
+                tg.expand();
+                tg.ready();
+                
+                const user = tg.initDataUnsafe?.user;
+                if (!user) {
+                    showError('Не удалось получить данные из Telegram');
+                    return;
+                }
+                
+                // Авторизация
+                const response = await fetch(API_URL + '/auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        initData: tg.initData,
+                        user: user
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    showError(data.error);
+                    return;
+                }
+                
+                currentUser = data.user;
+                updateProfile();
+                loadTasks();
+                loadSlaves();
+                loadTop();
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('main').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Ошибка инициализации:', error);
+                showError('Ошибка подключения к серверу');
+            }
+        }
+        
+        // Обновить профиль
+        function updateProfile() {
+            document.getElementById('username').textContent = 
+                currentUser.username ? '@' + currentUser.username : currentUser.first_name;
+            document.getElementById('balance').textContent = currentUser.balance;
+            document.getElementById('energy').textContent = currentUser.energy;
+            document.getElementById('level').textContent = 'Уровень ' + currentUser.level;
+        }
+        
+        // Загрузить задания
+        async function loadTasks() {
+            try {
+                const response = await fetch(API_URL + '/tasks/' + currentUser.id);
+                const data = await response.json();
+                
+                const tasksList = document.getElementById('tasks-list');
+                tasksList.innerHTML = '';
+                
+                if (data.tasks && data.tasks.length > 0) {
+                    data.tasks.forEach(task => {
+                        const taskElement = document.createElement('div');
+                        taskElement.className = 'task-item';
+                        taskElement.innerHTML = `
+                            <div class="task-title">${task.title}</div>
+                            <div class="task-desc">${task.description}</div>
+                            <div style="font-size: 12px; color: #888; margin-bottom: 10px;">
+                                От: ${task.master_name || 'Система'}
+                            </div>
+                            <button class="btn" onclick="openCompleteModal(${task.id}, '${task.title}', '${task.description}')">
+                                ✅ Выполнить
+                            </button>
+                        `;
+                        tasksList.appendChild(taskElement);
+                    });
+                } else {
+                    tasksList.innerHTML = '<p style="text-align: center; color: #666;">Нет активных заданий</p>';
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки заданий:', error);
+            }
+        }
+        
+        // Загрузить рабов
+        async function loadSlaves() {
+            try {
+                const response = await fetch(API_URL + '/slaves/' + currentUser.id);
+                const data = await response.json();
+                
+                const slavesList = document.getElementById('slaves-list');
+                slavesList.innerHTML = '';
+                
+                if (data.slaves && data.slaves.length > 0) {
+                    data.slaves.forEach(slave => {
+                        const slaveElement = document.createElement('div');
+                        slaveElement.className = 'player-item';
+                        slaveElement.innerHTML = `
+                            <div class="player-info">
+                                <div class="player-avatar">${slave.first_name.charAt(0)}</div>
+                                <div>
+                                    <div><strong>${slave.first_name}</strong></div>
+                                    <div style="font-size: 12px; color: #666;">${slave.balance} монет</div>
+                                </div>
+                            </div>
+                            <button class="btn" style="padding: 8px 12px; font-size: 14px;" 
+                                    onclick="giveTaskToSlave(${slave.id})">
+                                🎯 Задание
+                            </button>
+                        `;
+                        slavesList.appendChild(slaveElement);
+                    });
+                } else {
+                    slavesList.innerHTML = '<p style="text-align: center; color: #666;">У вас пока нет рабов</p>';
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки рабов:', error);
+            }
+        }
+        
+        // Загрузить топ
+        async function loadTop() {
+            try {
+                const response = await fetch(API_URL + '/top');
+                const data = await response.json();
+                
+                const topList = document.getElementById('top-list');
+                topList.innerHTML = '';
+                
+                if (data.players && data.players.length > 0) {
+                    let position = 1;
+                    data.players.forEach(player => {
+                        const playerElement = document.createElement('div');
+                        playerElement.className = 'player-item';
+                        
+                        let medal = '';
+                        if (position === 1) medal = '🥇';
+                        else if (position === 2) medal = '🥈';
+                        else if (position === 3) medal = '🥉';
+                        
+                        playerElement.innerHTML = `
+                            <div class="player-info">
+                                <div style="width: 30px; text-align: center;">${medal} ${position}</div>
+                                <div class="player-avatar">${player.first_name.charAt(0)}</div>
+                                <div>
+                                    <div><strong>${player.first_name}</strong></div>
+                                    <div style="font-size: 12px; color: #666;">Уровень ${player.level}</div>
+                                </div>
+                            </div>
+                            <div style="font-weight: bold; color: #667eea;">${player.balance}</div>
+                        `;
+                        topList.appendChild(playerElement);
+                        position++;
+                    });
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки топа:', error);
+            }
+        }
+        
+        // Дать задание рабу
+        async function giveTaskToSlave(slaveId) {
+            try {
+                const response = await fetch(API_URL + '/tasks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        master_id: currentUser.id,
+                        user_id: slaveId
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    alert('✅ Задание успешно дано!');
+                    tg.HapticFeedback.impactOccurred('medium');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                alert('❌ Ошибка при создании задания');
+            }
+        }
+        
+        // Дать случайное задание
+        async function giveRandomTask() {
+            try {
+                const response = await fetch(API_URL + '/slaves/' + currentUser.id);
+                const data = await response.json();
+                
+                if (data.slaves && data.slaves.length > 0) {
+                    const randomSlave = data.slaves[Math.floor(Math.random() * data.slaves.length)];
+                    giveTaskToSlave(randomSlave.id);
+                } else {
+                    alert('❌ У вас нет рабов');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+            }
+        }
+        
+        // Открыть модальное окно выполнения
+        function openCompleteModal(taskId, title, description) {
+            currentTaskId = taskId;
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-desc').textContent = description;
+            document.getElementById('proof-input').value = '';
+            document.getElementById('complete-modal').style.display = 'flex';
+            tg.HapticFeedback.impactOccurred('light');
+        }
+        
+        // Закрыть модальное окно
+        function closeModal() {
+            document.getElementById('complete-modal').style.display = 'none';
+        }
+        
+        // Отправить выполнение задания
+        async function submitTask() {
+            const proof = document.getElementById('proof-input').value.trim();
+            
+            if (!proof) {
+                alert('⚠️ Введите доказательство выполнения');
+                return;
+            }
+            
+            try {
+                const response = await fetch(API_URL + '/tasks/' + currentTaskId + '/complete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ proof })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('✅ Задание отправлено на проверку!');
+                    tg.HapticFeedback.notificationOccurred('success');
+                    closeModal();
+                    loadTasks();
+                    
+                    // Обновляем баланс через 2 секунды (имитация проверки)
+                    setTimeout(async () => {
+                        const approveResponse = await fetch(API_URL + '/tasks/' + currentTaskId + '/approve', {
+                            method: 'POST'
+                        });
+                        
+                        const approveData = await approveResponse.json();
+                        if (approveData.success) {
+                            currentUser.balance += approveData.reward;
+                            updateProfile();
+                            tg.showAlert(`💰 Вы получили ${approveData.reward} монет!`);
+                        }
+                    }, 2000);
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                alert('❌ Ошибка при отправке задания');
+            }
+        }
+        
+        // Покупка в магазине
+        async function buyItem(item) {
+            let cost, energyGain;
+            
+            switch(item) {
+                case 'energy':
+                    cost = 50;
+                    energyGain = 10;
+                    break;
+                case 'premium':
+                    cost = 200;
+                    alert('⭐ Премиум статус скоро будет доступен!');
+                    return;
+                default:
+                    return;
+            }
+            
+            if (currentUser.balance < cost) {
+                alert('❌ Недостаточно монет');
+                return;
+            }
+            
+            try {
+                const response = await fetch(API_URL + '/update-balance', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: currentUser.id,
+                        amount: -cost
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentUser.balance = data.balance;
+                    if (item === 'energy') {
+                        currentUser.energy += energyGain;
+                    }
+                    updateProfile();
+                    tg.HapticFeedback.notificationOccurred('success');
+                    tg.showAlert('✅ Покупка успешна!');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                alert('❌ Ошибка при покупке');
+            }
+        }
+        
+        // Переключение вкладок
+        function showTab(tabName) {
+            // Скрыть все вкладки
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.style.display = 'none';
+            });
+            
+            // Убрать активный класс со всех кнопок
+            document.querySelectorAll('.tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Показать выбранную вкладку
+            document.getElementById(tabName + '-tab').style.display = 'block';
+            
+            // Активировать кнопку
+            event.target.classList.add('active');
+            
+            tg.HapticFeedback.impactOccurred('light');
+        }
+        
+        // Показать ошибку
+        function showError(message) {
+            document.getElementById('loading').innerHTML = `
+                <h2>❌ Ошибка</h2>
+                <p>${message}</p>
+                <button class="btn" onclick="location.reload()">Попробовать снова</button>
+            `;
+        }
+        
+        // Запустить при загрузке
+        window.onload = init;
+    </script>
+</body>
+</html>
